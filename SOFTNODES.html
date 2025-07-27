@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOFTNODES POS System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN (for icons) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom styles for Lucide icons to be rendered */
+        .lucide {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        /* Basic animation for loading spinner */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-custom {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-900">
+
+    <!-- Main App Container -->
+    <div id="app-container" class="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-gray-100 to-gray-200">
+
+        <!-- Role Selection Screen (Initially visible) -->
+        <!-- Removed blue background as requested -->
+        <div id="role-selection-screen" class="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-gray-800 p-4 w-full hidden">
+            <h1 class="text-5xl font-extrabold mb-12 drop-shadow-lg text-blue-800 text-center">SOFTNODES COMPANY LTD POS</h1>
+            <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg text-gray-800">
+                <h2 class="text-3xl font-bold mb-8 text-center">Select Your Role</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <!-- Only the Owner button is kept as requested -->
+                    <button data-role="owner" class="role-select-btn flex flex-col items-center justify-center p-6 bg-yellow-100 text-yellow-800 rounded-lg shadow-md hover:bg-yellow-200 transition-colors duration-200 ease-in-out">
+                        <svg data-lucide="Gem" class="lucide mb-3" width="48" height="48"></svg>
+                        <span class="text-xl font-semibold">Owner</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Content (Initially hidden) -->
+        <div id="main-app-content" class="flex-1 flex flex-col md:flex-row">
+            <!-- Sidebar -->
+            <aside class="w-full md:w-64 bg-white shadow-xl p-6 md:p-4 border-b md:border-r border-gray-200 flex flex-col">
+                <h2 class="text-3xl font-extrabold mb-6 text-gray-800 flex items-center">
+                    <!-- Lucide ShoppingCart icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart text-blue-600 mr-2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                    SOFTNODES POS
+                </h2>
+                <div class="mb-6 text-gray-700 text-sm font-medium">
+                    Logged in as: <span id="logged-in-user-email" class="font-semibold text-blue-700"></span>
+                    <br>
+                    Role: <span id="logged-in-user-role" class="font-semibold text-blue-700"></span>
+                </div>
+                <nav id="sidebar-nav" class="space-y-3 flex-grow">
+                    <!-- Navigation items will be dynamically inserted here -->
+                </nav>
+                <div class="mt-auto pt-4 border-t border-gray-200">
+                    <button id="logout-button" class="block w-full text-left px-4 py-2 text-lg font-medium text-gray-700 hover:bg-red-500 hover:text-white rounded-lg transition-colors duration-200 ease-in-out flex items-center">
+                        <!-- Lucide LogOut icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out mr-2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="17 17 22 12 17 7"/><line x1="22" x2="10" y1="12" y2="12"/></svg>
+                        Switch Role
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main id="main-content-area" class="flex-1 p-6 md:p-8 overflow-auto">
+                <!-- Content will be dynamically inserted here -->
+            </main>
+        </div>
+    </div>
+
+    <!-- Custom Message Box -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
+            <h3 id="message-box-title" class="text-2xl font-bold mb-4 text-gray-800"></h3>
+            <p id="message-box-message" class="mb-6 text-gray-700 whitespace-pre-wrap"></p>
+            <button id="message-box-ok-button" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <script>
+        console.log("Script started."); // Debugging log
+
+        // Gemini API Key (leave empty, Canvas will inject it at runtime)
+        const apiKey = "";
+
+        // --- DOM Elements ---
+        const roleSelectionScreen = document.getElementById('role-selection-screen'); // New role selection screen
+        const mainAppContent = document.getElementById('main-app-content');
+        const logoutButton = document.getElementById('logout-button');
+        const loggedInUserEmailSpan = document.getElementById('logged-in-user-email');
+        const loggedInUserRoleSpan = document.getElementById('logged-in-user-role');
+        const sidebarNav = document.getElementById('sidebar-nav');
+        const mainContentArea = document.getElementById('main-content-area');
+
+        const messageBox = document.getElementById('message-box');
+        const messageBoxTitle = document.getElementById('message-box-title');
+        const messageBoxMessage = document.getElementById('message-box-message');
+        const messageBoxOkButton = document.getElementById('message-box-ok-button');
+
+        // --- Global State ---
+        let isLoggedIn = true; // Start as logged in
+        let userRole = 'owner'; // Set default role to 'owner'
+        let loggedInUserEmail = 'owner@softnodes.com'; // Set default email for owner
+        let currentPage = 'dashboard'; // Start with dashboard page
+
+        let cart = [];
+        let products = [ // SOFTNODES specific products
+            { id: 1, name: "300W Solar Panel", sku: "SP300W", costPrice: 150000, price: 250000, stock: 50, category: "Solar", variants: "N/A", expiryDate: "N/A", image: "https://placehold.co/150x150/007bff/ffffff?text=Solar+Panel", description: "High-efficiency 300W solar panel for robust energy generation. Ideal for residential and commercial solar installations.", salesPitch: "Power your future with our 300W Solar Panel! Maximize energy efficiency and reduce your electricity bills. Reliable, durable, and perfect for sustainable living. Invest in clean energy today!" },
+            { id: 2, name: "Wi-Fi PTZ Camera", sku: "WPCAM001", costPrice: 80000, price: 120000, stock: 30, category: "Surveillance", variants: "White/Black", expiryDate: "N/A", image: "https://placehold.co/150x150/28a745/ffffff?text=PTZ+Camera", description: "Full HD Wi-Fi Pan-Tilt-Zoom camera with 360° coverage and remote access. Enhance your security with smart motion tracking.", salesPitch: "Secure your premises with our Wi-Fi PTZ Camera! Enjoy 360-degree surveillance, crystal-clear HD video, and remote access from anywhere. Keep an eye on what matters most, effortlessly." },
+            { id: 3, name: "50W LED Floodlight", sku: "FL50WMS", costPrice: 40000, price: 65000, stock: 20, category: "Lighting", variants: "Motion-Sensing", expiryDate: "N/A", image: "https://placehold.co/150x150/ffc107/000000?text=Floodlight", description: "Bright 50W LED floodlight with integrated motion sensor for enhanced outdoor security lighting. Energy-efficient and durable.", salesPitch: "Illuminate and secure your property with our 50W LED Floodlight! Its motion sensor provides instant, bright light when needed, deterring intruders and enhancing safety. Energy-efficient and built to last." },
+            { id: 4, name: "Electric Fence Control Unit", sku: "EFCU001", costPrice: 200000, price: 350000, stock: 15, category: "Security", variants: "Standard", expiryDate: "N/A", image: "https://placehold.co/150x150/dc3545/ffffff?text=Fence+Unit", description: "Robust electric fence control unit providing high-voltage pulses for perimeter security. Essential for effective electric fencing systems.", salesPitch: "Fortify your perimeter with our Electric Fence Control Unit! This powerful device ensures maximum security, providing a strong deterrent against unauthorized access. Protect your property with confidence." },
+            { id: 5, name: "Smart Home Hub", sku: "SHH2024", costPrice: 120000, price: 190000, stock: 40, category: "Smart Home", variants: "Zigbee/Wi-Fi", expiryDate: "N/A", image: "https://placehold.co/150x150/6f42c1/ffffff?text=Smart+Hub", description: "Centralized smart home hub for seamless integration and control of all your smart devices. Supports Zigbee and Wi-Fi protocols.", salesPitch: "Transform your home into a smart haven with our Smart Home Hub! Connect and control all your smart devices effortlessly from one central unit. Experience convenience, security, and energy savings at your fingertips." },
+            { id: 6, name: "Solar Charge Controller", sku: "SCC60A", costPrice: 70000, price: 110000, stock: 25, category: "Solar", variants: "60A MPPT", expiryDate: "N/A", image: "https://placehold.co/150x150/20c997/ffffff?text=Charge+Controller", description: "60A MPPT solar charge controller for efficient power management and battery charging in solar systems. Maximizes energy harvest.", salesPitch: "Optimize your solar system with our 60A MPPT Charge Controller! It efficiently manages power flow, ensuring your batteries charge faster and last longer. Get the most out of your solar investment." },
+            { id: 7, name: "Outdoor IR Camera", sku: "OIRCAM02", costPrice: 60000, price: 95000, stock: 10, category: "Surveillance", variants: "1080P", expiryDate: "N/A", image: "https://placehold.co/150x150/fd7e14/ffffff?text=IR+Camera", description: "Durable outdoor infrared camera with 1080P resolution for clear night vision surveillance. Weatherproof and reliable.", salesPitch: "Ensure 24/7 security with our Outdoor IR Camera! Experience crystal-clear 1080P resolution, even in complete darkness, thanks to its powerful infrared night vision. Built tough for any weather." },
+            { id: 8, name: "Electric Fence Wire (500m)", sku: "EFW500M", costPrice: 30000, price: 50000, stock: 60, category: "Security", variants: "Galvanized", expiryDate: "N/A", image: "https://placehold.co/150x150/6c757d/ffffff?text=Fence+Wire", description: "High-quality 500m galvanized electric fence wire for robust perimeter security. Durable and highly conductive.", salesPitch: "Build an impenetrable barrier with our 500m Electric Fence Wire! Made from high-quality galvanized steel, it ensures maximum conductivity and durability for your security fence. The first line of defense for your property." },
+            { id: 9, name: "Smart Plug (Wi-Fi)", sku: "SPW003", costPrice: 15000, price: 25000, stock: 100, category: "Smart Home", variants: "Single", expiryDate: "N/A", image: "https://placehold.co/150x150/17a2b8/ffffff?text=Smart+Plug", description: "Wi-Fi enabled smart plug for remote control of appliances and energy monitoring. Easy to set up and use.", salesPitch: "Control your home from anywhere with our Smart Wi-Fi Plug! Turn devices on/off remotely, set schedules, and monitor energy usage. Make your home smarter and more energy-efficient instantly." },
+            { id: 10, name: "Solar Battery (100Ah)", sku: "SB100AH", costPrice: 400000, price: 600000, stock: 10, category: "Solar", variants: "Gel", expiryDate: "N/A", image: "https://placehold.co/150x150/6610f2/ffffff?text=Solar+Battery", description: "Deep cycle 100Ah Gel solar battery for reliable energy storage in off-grid and backup solar systems. Long lifespan.", salesPitch: "Ensure uninterrupted power with our 100Ah Solar Battery! Designed for deep cycling, it provides reliable energy storage for your solar system, guaranteeing power even when the sun isn't shining. Invest in dependable backup power." },
+        ];
+        let productSliderPage = 0; // For product slider
+        const productsPerPage = 5; // Number of products to show per slide
+        let discountType = 'none'; // 'none', 'percentage', 'fixed'
+        let discountValue = 0;
+        let paymentMethod = 'cash'; // 'cash', 'card', 'mobile_money', 'credit'
+        let productSearchTerm = ''; // For product search
+
+        // State for AI generation loading
+        let isGeneratingDescription = false;
+        let isGeneratingSalesPitch = {}; // Stores loading state per product ID
+
+        // Product management form states
+        let newProductName = '';
+        let newProductPrice = '';
+        let newProductCostPrice = '';
+        let newProductStock = '';
+        let newProductImage = '';
+        let newProductSku = '';
+        let newProductCategory = '';
+        let newProductVariants = '';
+        let newProductExpiryDate = '';
+        let newProductDescription = '';
+        let editingProductId = null;
+
+        // Simulated User Database (for demonstration)
+        const usersDb = [
+            { email: 'admin@softnodes.com', password: 'adminpass', role: 'admin' },
+            { email: 'cashier@softnodes.com', password: 'cashierpass', role: 'cashier' },
+            { email: 'manager@softnodes.com', password: 'managerpass', role: 'manager' },
+            { email: 'owner@softnodes.com', password: 'ownerpass', role: 'owner' },
+        ];
+
+        // --- Utility Functions ---
+        // Modified showMessageBox to accept an optional callback for the OK button
+        function showMessageBox(title, message, callback = null) {
+            messageBoxTitle.textContent = title;
+            messageBoxMessage.textContent = message;
+            messageBox.classList.remove('hidden');
+
+            // Clear previous event listener to prevent multiple calls
+            messageBoxOkButton.onclick = null;
+            messageBoxOkButton.onclick = () => {
+                hideMessageBox();
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
+            };
+        }
+
+        function hideMessageBox() {
+            messageBox.classList.add('hidden');
+        }
+
+        // --- Authentication Functions ---
+        function handleRoleSelect(role) {
+            // Find a user with the selected role (using the first one found for simplicity)
+            const user = usersDb.find(u => u.role === role);
+            if (user) {
+                isLoggedIn = true;
+                userRole = user.role;
+                loggedInUserEmail = user.email;
+                currentPage = 'dashboard'; // Default to dashboard after role selection
+                showMessageBox("Role Selected", `Welcome, ${user.role.toUpperCase()}!`);
+                renderApp(); // Re-render the app to show main content
+            } else {
+                // This case should ideally not happen with predefined roles
+                showMessageBox("Error", "Could not find user for selected role.");
+            }
+        }
+
+        function handleLogout() {
+            isLoggedIn = false;
+            userRole = null;
+            loggedInUserEmail = '';
+            cart = []; // Clear cart on logout
+            currentPage = 'role-selection'; // Go back to role selection screen
+            showMessageBox("Logged Out", "You have been successfully logged out. Please select a role to continue.");
+            renderApp(); // Re-render to show role selection screen
+        }
+
+        // --- Role-Based Access Control ---
+        function hasAccess(requiredRoles) {
+            if (!isLoggedIn || !userRole) return false;
+            return requiredRoles.includes(userRole);
+        }
+
+        // --- Sales/Checkout Module Functions ---
+        function addToCart(product) {
+            const productInStock = products.find(p => p.id === product.id);
+            if (!productInStock || productInStock.stock <= 0) {
+                showMessageBox("Out of Stock", `${product.name} is currently out of stock.`);
+                return;
+            }
+
+            const existing = cart.find((item) => item.id === product.id);
+            if (existing) {
+                if (existing.qty + 1 > productInStock.stock) {
+                    showMessageBox("Insufficient Stock", `Cannot add more ${productInStock.name}. Only ${productInStock.stock} left.`);
+                    return;
+                }
+                cart = cart.map((item) =>
+                    item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+                );
+            } else {
+                cart = [...cart, { ...product, qty: 1 }];
+            }
+            renderApp(); // Re-render to update cart
+        }
+
+        function updateCartQuantity(productId, change) {
+            const productInStock = products.find(p => p.id === productId);
+            const currentItem = cart.find(item => item.id === productId);
+
+            if (!currentItem) return; // Should not happen if UI is correct
+
+            const newQty = currentItem.qty + change;
+
+            if (newQty > productInStock.stock) {
+                showMessageBox("Insufficient Stock", `Cannot add more ${productInStock.name}. Only ${productInStock.stock} left.`);
+                return;
+            }
+
+            cart = cart
+                .map((item) =>
+                    item.id === productId ? { ...item, qty: newQty } : item
+                )
+                .filter((item) => item.qty > 0); // Remove item if quantity drops to 0 or below
+            renderApp(); // Re-render to update cart
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter((item) => item.id !== productId);
+            renderApp(); // Re-render to update cart
+        }
+
+        function clearCart() {
+            cart = [];
+            discountType = 'none';
+            discountValue = 0;
+            paymentMethod = 'cash';
+            renderApp(); // Re-render to clear cart
+        }
+
+        function calculateSubtotal() {
+            return cart.reduce((acc, item) => acc + item.qty * item.price, 0);
+        }
+
+        function calculateDiscountAmount() {
+            const subtotal = calculateSubtotal();
+            if (discountType === 'percentage') {
+                return subtotal * (discountValue / 100);
+            } else if (discountType === 'fixed') {
+                return discountValue;
+            }
+            return 0;
+        }
+
+        function handleCheckout() {
+            if (cart.length === 0) {
+                showMessageBox("Cart Empty", "Your cart is empty. Please add items before checking out.");
+                return;
+            }
+
+            // Deduct stock from products
+            products = products.map(product => {
+                const cartItem = cart.find(item => item.id === product.id);
+                if (cartItem) {
+                    return { ...product, stock: product.stock - cartItem.qty };
+                }
+                return product;
+            });
+
+            const subtotal = calculateSubtotal();
+            const discountAmount = calculateDiscountAmount();
+            const taxableAmount = subtotal - discountAmount;
+            const taxRate = 0.18; // 18% VAT (example)
+            const taxAmount = taxableAmount > 0 ? taxableAmount * taxRate : 0;
+            const total = taxableAmount + taxAmount;
+
+            // Simulate a checkout process
+            const receiptDetails = `
+Subtotal: UGX ${subtotal.toLocaleString()}
+Discount: UGX ${discountAmount.toLocaleString()}
+Tax (18%): UGX ${taxAmount.toLocaleString()}
+Total: UGX ${total.toLocaleString()}
+Payment Method: ${paymentMethod.replace('_', ' ').toUpperCase()}
+Thank you for your purchase!
+            `;
+            showMessageBox("Checkout Successful!", receiptDetails);
+            clearCart(); // Clear cart after successful checkout
+            renderApp(); // Re-render to update product stock and clear cart
+        }
+
+        // Product slider navigation
+        function goToNextProductPage() {
+            const filtered = products.filter(p => p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) || p.sku.toLowerCase().includes(productSearchTerm.toLowerCase()));
+            const totalPages = Math.ceil(filtered.length / productsPerPage);
+            productSliderPage = Math.min(productSliderPage + 1, totalPages - 1);
+            renderApp();
+        }
+
+        function goToPrevProductPage() {
+            productSliderPage = Math.max(productSliderPage - 1, 0);
+            renderApp();
+        }
+
+        // --- Product Management Module Functions ---
+        function resetProductForm() {
+            newProductName = '';
+            newProductPrice = '';
+            newProductCostPrice = '';
+            newProductStock = '';
+            newProductImage = '';
+            newProductSku = '';
+            newProductCategory = '';
+            newProductVariants = '';
+            newProductExpiryDate = '';
+            newProductDescription = '';
+            editingProductId = null;
+        }
+
+        function handleAddProduct(event) {
+            event.preventDefault();
+            if (!newProductName || isNaN(newProductPrice) || parseFloat(newProductPrice) <= 0 || isNaN(newProductStock) || parseInt(newProductStock) < 0 || isNaN(newProductCostPrice) || parseFloat(newProductCostPrice) <= 0) {
+                showMessageBox("Invalid Input", "Please fill all required fields correctly. Price, Cost Price, and Stock must be valid numbers.");
+                return;
+            }
+
+            const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+            products.push({
+                id: newId,
+                name: newProductName,
+                price: parseFloat(newProductPrice),
+                costPrice: parseFloat(newProductCostPrice),
+                stock: parseInt(newProductStock),
+                image: newProductImage || `https://placehold.co/150x150/CCCCCC/666666?text=${newProductName.split(' ')[0]}`,
+                sku: newProductSku,
+                category: newProductCategory,
+                variants: newProductVariants,
+                expiryDate: newProductExpiryDate,
+                description: newProductDescription
+            });
+            showMessageBox("Product Added", `${newProductName} has been added to products.`);
+            resetProductForm();
+            renderApp(); // Re-render to update product list
+        }
+
+        function handleEditProduct(productId) {
+            editingProductId = productId;
+            const productToEdit = products.find(p => p.id === productId);
+            if (productToEdit) {
+                newProductName = productToEdit.name;
+                newProductPrice = productToEdit.price.toString();
+                newProductCostPrice = productToEdit.costPrice.toString();
+                newProductStock = productToEdit.stock.toString();
+                newProductImage = productToEdit.image;
+                newProductSku = productToEdit.sku || '';
+                newProductCategory = productToEdit.category || '';
+                newProductVariants = productToEdit.variants || '';
+                newProductExpiryDate = productToEdit.expiryDate || '';
+                newProductDescription = productToEdit.description || '';
+            }
+            renderApp(); // Re-render to populate the form
+        }
+
+        function handleSaveProduct(event) {
+            event.preventDefault();
+            if (!newProductName || isNaN(newProductPrice) || parseFloat(newProductPrice) <= 0 || isNaN(newProductStock) || parseInt(newProductStock) < 0 || isNaN(newProductCostPrice) || parseFloat(newProductCostPrice) <= 0) {
+                showMessageBox("Invalid Input", "Please fill all required fields correctly. Price, Cost Price, and Stock must be valid numbers.");
+                return;
+            }
+
+            products = products.map(p =>
+                p.id === editingProductId
+                    ? {
+                        ...p,
+                        name: newProductName,
+                        price: parseFloat(newProductPrice),
+                        costPrice: parseFloat(newProductCostPrice),
+                        stock: parseInt(newProductStock),
+                        image: newProductImage || `https://placehold.co/150x150/CCCCCC/666666?text=${newProductName.split(' ')[0]}`,
+                        sku: newProductSku,
+                        category: newProductCategory,
+                        variants: newProductVariants,
+                        expiryDate: newProductExpiryDate,
+                        description: newProductDescription
+                    }
+                    : p
+            );
+            showMessageBox("Product Updated", `${newProductName} has been updated.`);
+            resetProductForm();
+            renderApp(); // Re-render to update product list
+        }
+
+        function handleDeleteProduct(productId) {
+            // Corrected usage of showMessageBox with a callback
+            showMessageBox("Confirm Deletion", "Are you sure you want to delete this product?", () => {
+                products = products.filter(p => p.id !== productId);
+                showMessageBox("Product Deleted", "Product has been removed.");
+                renderApp(); // Re-render to update product list
+            });
+        }
+
+        function handleStockIn(productId, amount) {
+            products = products.map(p =>
+                p.id === productId ? { ...p, stock: p.stock + amount } : p
+            );
+            showMessageBox("Stock Updated", `Stock for product ID ${productId} changed by ${amount}.`);
+            renderApp(); // Re-render to update product list
+        }
+
+        // --- Gemini API Integrations ---
+        async function generateProductDescription() {
+            isGeneratingDescription = true;
+            renderApp(); // Show loading state
+
+            try {
+                const prompt = `Generate a compelling marketing description (around 50-70 words) for a product from SOFTNODES COMPANY LTD, a smart technology and security solutions provider.
+Product Name: ${newProductName || 'Unnamed Product'}
+SKU: ${newProductSku || 'N/A'}
+Category: ${newProductCategory || 'General'}
+Focus on innovation, trust, and benefits for security/smart tech.`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    newProductDescription = text; // Update the state variable
+                } else {
+                    showMessageBox("AI Error", "Failed to generate description. Please try again.");
+                }
+            } catch (error) {
+                console.error("Error generating product description:", error);
+                showMessageBox("API Error", "Could not connect to AI service for description generation.");
+            } finally {
+                isGeneratingDescription = false;
+                renderApp(); // Hide loading state and re-render form with new description
+            }
+        }
+
+        async function generateSalesPitch(product) {
+            isGeneratingSalesPitch = { ...isGeneratingSalesPitch, [product.id]: true };
+            renderApp(); // Show loading state for specific product
+
+            try {
+                const prompt = `Generate a very concise and persuasive sales pitch (2-3 sentences max) for the following product from SOFTNODES COMPANY LTD, a smart technology and security solutions provider.
+Product Name: ${product.name}
+Category: ${product.category}
+Selling Price: UGX ${product.price.toLocaleString()}
+Focus on its key benefits and why a customer needs it for security or smart tech.`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    showMessageBox(`Sales Pitch for ${product.name}`, text);
+                } else {
+                    showMessageBox("AI Error", "Failed to generate sales pitch. Please try again.");
+                }
+            } catch (error) {
+                console.error("Error generating sales pitch:", error);
+                showMessageBox("API Error", "Could not connect to AI service for sales pitch generation.");
+            } finally {
+                isGeneratingSalesPitch = { ...isGeneratingSalesPitch, [product.id]: false };
+                renderApp(); // Hide loading state
+            }
+        }
+
+        // --- Main Rendering Function ---
+        function renderApp() {
+            console.log("renderApp called. isLoggedIn:", isLoggedIn); // Debugging log
+            // The role selection screen is now always hidden
+            roleSelectionScreen.classList.add('hidden');
+            mainAppContent.classList.remove('hidden');
+
+            loggedInUserEmailSpan.textContent = loggedInUserEmail;
+            loggedInUserRoleSpan.textContent = userRole?.toUpperCase();
+            renderSidebar();
+            renderMainContent();
+            console.log("Main app content visible."); // Debugging log
+
+            // Ensure Lucide icons are created for all elements, including dynamically added ones.
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            } else {
+                console.error("Lucide library not loaded or createIcons not available.");
+            }
+        }
+
+        function renderSidebar() {
+            sidebarNav.innerHTML = ''; // Clear existing nav items
+
+            // Only show navigation items accessible to the 'owner' role
+            const navItems = [
+                { id: 'dashboard', text: 'Dashboard', icon: 'Home', roles: ['owner'] },
+                { id: 'products', text: 'Sales/Checkout', icon: 'ShoppingCart', roles: ['owner'] },
+                { id: 'product-management', text: 'Product Management', icon: 'Package', roles: ['owner'] },
+                { id: 'inventory', text: 'Inventory', icon: 'HardDrive', roles: ['owner'] },
+                { id: 'payments', text: 'Payments', icon: 'DollarSign', roles: ['owner'] },
+                { id: 'customer-management', text: 'Customer Management', icon: 'UserCheck', roles: ['owner'] },
+                { id: 'reports-bi', text: 'Reports & BI', icon: 'BarChart2', roles: ['owner'] },
+                { id: 'receipts-invoicing', text: 'Receipts & Invoicing', icon: 'Receipt', roles: ['owner'] },
+                { id: 'security-config', text: 'Security & Config', icon: 'ShieldCheck', roles: ['owner'] },
+                { id: 'system-settings', text: 'System Settings', icon: 'Settings', roles: ['owner'] },
+            ];
+
+            navItems.forEach(item => {
+                if (hasAccess(item.roles)) {
+                    const button = document.createElement('button');
+                    button.className = `block w-full text-left px-4 py-2 text-lg font-medium rounded-lg transition-colors duration-200 ease-in-out flex items-center ${currentPage === item.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-500 hover:text-white'}`;
+                    button.innerHTML = `<svg data-lucide="${item.icon}" class="lucide mr-2" width="20" height="20"></svg> ${item.text}`;
+                    button.onclick = () => {
+                        currentPage = item.id;
+                        renderApp(); // Re-render to update active page and content
+                    };
+                    sidebarNav.appendChild(button);
+                }
+            });
+        }
+
+        function renderMainContent() {
+            console.log("renderMainContent called. Current page:", currentPage); // Debugging log
+            mainContentArea.innerHTML = ''; // Clear existing content
+            let contentHtml = '';
+            let accessDeniedMessage = "You do not have permission to view this page.";
+
+            switch (currentPage) {
+                case 'dashboard':
+                    if (hasAccess(['owner'])) {
+                        const lowStockCount = products.filter(p => p.stock <= 5).length;
+
+                        // Simulated owner-specific metrics
+                        const totalRevenue = 52500000; // Example total revenue
+                        const totalCost = 30000000;    // Example total cost
+                        const totalProfit = totalRevenue - totalCost;
+                        const numberOfTransactions = 750; // Example number of transactions
+                        const averageTransactionValue = totalRevenue / numberOfTransactions;
+                        const totalInventoryValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
+
+                        // Simulate top-selling products (just pick a few with high stock as a proxy)
+                        const topSellingProducts = products.slice(0, 3).map(p => ({
+                            name: p.name,
+                            salesCount: Math.floor(Math.random() * 50) + 20 // Random sales count
+                        })).sort((a,b) => b.salesCount - a.salesCount);
+
+
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="Gem" class="lucide mr-2" width="32" height="32"></svg> Owner Dashboard
+                                </h1>
+                                <p class="text-gray-600 mb-4">Welcome, ${loggedInUserEmail} (${userRole?.toUpperCase()})! Here's a comprehensive overview of your business performance.</p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                                    <div class="bg-blue-50 p-4 rounded-lg shadow-sm flex flex-col items-center text-center">
+                                        <svg data-lucide="DollarSign" class="lucide text-blue-600 mb-2" width="32" height="32"></svg>
+                                        <p class="text-sm text-gray-600">Total Revenue</p>
+                                        <p class="text-2xl font-bold text-blue-800">UGX ${totalRevenue.toLocaleString()}</p>
+                                    </div>
+                                    <div class="bg-green-50 p-4 rounded-lg shadow-sm flex flex-col items-center text-center">
+                                        <svg data-lucide="TrendingUp" class="lucide text-green-600 mb-2" width="32" height="32"></svg>
+                                        <p class="text-sm text-gray-600">Total Profit</p>
+                                        <p class="text-2xl font-bold text-green-800">UGX ${totalProfit.toLocaleString()}</p>
+                                    </div>
+                                    <div class="bg-purple-50 p-4 rounded-lg shadow-sm flex flex-col items-center text-center">
+                                        <svg data-lucide="Package" class="lucide text-purple-600 mb-2" width="32" height="32"></svg>
+                                        <p class="text-sm text-gray-600">Total Inventory Value</p>
+                                        <p class="text-2xl font-bold text-purple-800">UGX ${totalInventoryValue.toLocaleString()}</p>
+                                    </div>
+                                    <div class="bg-red-50 p-4 rounded-lg shadow-sm flex flex-col items-center text-center">
+                                        <svg data-lucide="AlertTriangle" class="lucide text-red-600 mb-2" width="32" height="32"></svg>
+                                        <p class="text-sm text-gray-600">Low Stock Alerts</p>
+                                        <p class="text-2xl font-bold text-red-800">${lowStockCount} Items</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                                    <div class="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 h-64 flex items-center justify-center text-center text-gray-500">
+                                        <div>
+                                            <h2 class="text-xl font-bold mb-2 text-gray-800">Sales Trend (Placeholder)</h2>
+                                            <p>Monthly sales performance graph would appear here.</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 h-64 flex flex-col justify-center items-center text-center text-gray-500">
+                                        <h2 class="text-xl font-bold mb-2 text-gray-800">Profit Margin Analysis (Placeholder)</h2>
+                                        <p>Detailed profit margin breakdown per product/category.</p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 mb-8">
+                                    <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
+                                        <svg data-lucide="Award" class="lucide mr-2" width="24" height="24"></svg> Top Selling Products
+                                    </h2>
+                                    <ul class="space-y-2">
+                                        ${topSellingProducts.map(product => `
+                                            <li class="flex justify-between items-center p-2 bg-gray-50 rounded-md">
+                                                <span class="font-medium text-gray-700">${product.name}</span>
+                                                <span class="text-blue-600 font-semibold">${product.salesCount} units sold</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                    ${topSellingProducts.length === 0 ? '<p class="text-gray-500 text-center py-4">No sales data to display top products.</p>' : ''}
+                                </div>
+
+                                <div class="mt-8 p-4 bg-gray-100 rounded-lg">
+                                    <h3 class="text-lg font-semibold mb-2 text-gray-800">Branch Performance Overview (Placeholder)</h3>
+                                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                        <option>Main Branch - Kampala (UGX 10M Profit)</option>
+                                        <option>Branch B - Entebbe (UGX 5M Profit)</option>
+                                        <option>Branch C - Jinja (UGX 3M Profit)</option>
+                                    </select>
+                                    <p class="text-sm text-gray-600 mt-2">Select a branch to view its specific performance metrics.</p>
+                                </div>
+
+                                <div class="mt-8">
+                                    <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
+                                        <svg data-lucide="GitPullRequest" class="lucide mr-2" width="24" height="24"></svg> Quick Actions
+                                    </h2>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <button id="goto-sales-btn" class="bg-blue-100 text-blue-800 p-4 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors">
+                                            <svg data-lucide="ShoppingCart" class="lucide mr-2" width="20" height="20"></svg> Go to Sales
+                                        </button>
+                                        <button id="manage-products-btn" class="bg-green-100 text-green-800 p-4 rounded-lg flex items-center justify-center hover:bg-green-200 transition-colors">
+                                            <svg data-lucide="Package" class="lucide mr-2" width="20" height="20"></svg> Manage Products
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+                case 'products':
+                    if (hasAccess(['owner'])) {
+                        const filtered = products.filter(p => p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) || p.sku.toLowerCase().includes(productSearchTerm.toLowerCase()));
+                        const currentTotalProductSliderPages = Math.ceil(filtered.length / productsPerPage);
+                        const currentProductsForSlider = filtered.slice(productSliderPage * productsPerPage, (productSliderPage * productsPerPage) + productsPerPage);
+
+                        let productCardsHtml = '';
+                        if (filtered.length === 0) {
+                            productCardsHtml = `<div class="w-full text-center py-12 text-gray-500">No products found matching your search.</div>`;
+                        } else {
+                            productCardsHtml = currentProductsForSlider.map(product => `
+                                <div class="flex-shrink-0 w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 p-2">
+                                    <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 overflow-hidden border border-gray-200 h-full flex flex-col">
+                                        <img src="${product.image}" alt="${product.name}" class="w-full h-32 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/150x150/CCCCCC/666666?text=Image+Error';"/>
+                                        <div class="p-4 flex-grow flex flex-col justify-between">
+                                            <div>
+                                                <h3 class="text-lg font-semibold text-gray-800 truncate mb-1">
+                                                    ${product.name}
+                                                </h3>
+                                                <p class="text-blue-600 text-xl font-bold mb-1">
+                                                    UGX ${product.price.toLocaleString()}
+                                                </p>
+                                                <p class="text-sm font-medium ${product.stock <= 5 ? 'text-yellow-600' : 'text-gray-600'}">
+                                                    Stock: ${product.stock} ${product.stock <= 5 ? '<svg data-lucide="AlertTriangle" class="lucide inline-block align-middle ml-1" width="14" height="14"></svg>' : ''}
+                                                </p>
+                                            </div>
+                                            <button data-product-id="${product.id}" class="add-to-cart-btn w-full py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed mt-3" ${product.stock <= 0 ? 'disabled' : ''}>
+                                                ${product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                                            </button>
+                                            <button data-product-id="${product.id}" class="get-sales-pitch-btn w-full py-2 bg-yellow-400 text-gray-800 font-semibold rounded-lg hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 transition-colors duration-200 ease-in-out mt-2 flex items-center justify-center" ${isGeneratingSalesPitch[product.id] ? 'disabled' : ''}>
+                                                ${isGeneratingSalesPitch[product.id] ? `
+                                                    <svg class="animate-spin-custom -ml-1 mr-2 h-5 w-5 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Generating...
+                                                ` : `
+                                                    <svg data-lucide="Sparkles" class="lucide mr-2" width="18" height="18"></svg> Get Sales Pitch
+                                                `}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+
+                        let cartItemsHtml = '';
+                        if (cart.length === 0) {
+                            cartItemsHtml = `
+                                <div class="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                                    <p class="text-gray-500 text-lg">Your cart is feeling a bit empty. Add some products!</p>
+                                </div>
+                            `;
+                        } else {
+                            cartItemsHtml = `
+                                <ul class="space-y-4 mb-6">
+                                    ${cart.map(item => `
+                                        <li class="flex flex-col sm:flex-row items-center justify-between p-3 bg-gray-50 rounded-lg shadow-sm">
+                                            <span class="text-lg font-medium text-gray-800 mb-2 sm:mb-0">
+                                                ${item.name}
+                                            </span>
+                                            <div class="flex items-center space-x-3">
+                                                <div class="flex items-center border border-gray-300 rounded-md">
+                                                    <button data-product-id="${item.id}" class="update-cart-qty-btn px-3 py-1 text-gray-700 hover:bg-gray-200 rounded-l-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed" data-change="-1" ${item.qty <= 1 ? 'disabled' : ''}>
+                                                        <svg data-lucide="Minus" class="lucide" width="16" height="16"></svg>
+                                                    </button>
+                                                    <span class="px-3 py-1 border-x border-gray-300 font-semibold">
+                                                        ${item.qty}
+                                                    </span>
+                                                    <button data-product-id="${item.id}" class="update-cart-qty-btn px-3 py-1 text-gray-700 hover:bg-gray-200 rounded-r-md transition-colors duration-150" data-change="1">
+                                                        <svg data-lucide="Plus" class="lucide" width="16" height="16"></svg>
+                                                    </button>
+                                                </div>
+                                                <span class="text-xl font-bold text-green-700 min-w-[120px] text-right">
+                                                    UGX ${(item.qty * item.price).toLocaleString()}
+                                                </span>
+                                                <button data-product-id="${item.id}" class="remove-from-cart-btn p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200 flex items-center justify-center text-sm" title="Remove item">
+                                                    <svg data-lucide="Trash2" class="lucide" width="16" height="16"></svg>
+                                                </button>
+                                            </div>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+
+                                <!-- Discount Section -->
+                                <div class="mb-4 p-4 bg-gray-100 rounded-lg">
+                                    <h3 class="text-lg font-semibold mb-2">Apply Discount</h3>
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <select id="discount-type-select" class="border border-gray-300 rounded-lg px-3 py-2">
+                                            <option value="none" ${discountType === 'none' ? 'selected' : ''}>No Discount</option>
+                                            <option value="percentage" ${discountType === 'percentage' ? 'selected' : ''}>Percentage (%)</option>
+                                            <option value="fixed" ${discountType === 'fixed' ? 'selected' : ''}>Fixed Amount (UGX)</option>
+                                        </select>
+                                        ${discountType !== 'none' ? `
+                                            <input type="number" id="discount-value-input" placeholder="${discountType === 'percentage' ? "e.g., 10" : "e.g., 5000"}" class="border border-gray-300 rounded-lg px-3 py-2 flex-grow" value="${discountValue}" min="0" ${discountType === 'percentage' ? 'max="100"' : ''}>
+                                        ` : ''}
+                                    </div>
+                                    ${calculateDiscountAmount() > 0 ? `
+                                        <p class="text-sm text-gray-600">Discount Applied: - UGX ${calculateDiscountAmount().toLocaleString()}</p>
+                                    ` : ''}
+                                </div>
+
+                                <!-- Payment Method Section -->
+                                <div class="mb-6 p-4 bg-gray-100 rounded-lg">
+                                    <h3 class="text-lg font-semibold mb-2">Payment Method</h3>
+                                    <div class="flex flex-wrap gap-3">
+                                        <button data-payment-method="cash" class="payment-method-btn flex items-center px-4 py-2 rounded-lg border ${paymentMethod === 'cash' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}">
+                                            <svg data-lucide="Banknote" class="lucide mr-2" width="18" height="18"></svg> Cash
+                                        </button>
+                                        <button data-payment-method="card" class="payment-method-btn flex items-center px-4 py-2 rounded-lg border ${paymentMethod === 'card' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}">
+                                            <svg data-lucide="CreditCard" class="lucide mr-2" width="18" height="18"></svg> Card
+                                        </button>
+                                        <button data-payment-method="mobile_money" class="payment-method-btn flex items-center px-4 py-2 rounded-lg border ${paymentMethod === 'mobile_money' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}">
+                                            <svg data-lucide="Smartphone" class="lucide mr-2" width="18" height="18"></svg> Mobile Money
+                                        </button>
+                                        <button data-payment-method="credit" class="payment-method-btn flex items-center px-4 py-2 rounded-lg border ${paymentMethod === 'credit' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}">
+                                            <svg data-lucide="UserCheck" class="lucide mr-2" width="18" height="18"></svg> Credit
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col sm:flex-row justify-between items-center border-t-2 border-gray-200 pt-4 mt-4">
+                                    <span class="text-xl font-semibold text-gray-900 mb-2 sm:mb-0">Subtotal:</span>
+                                    <span class="text-xl font-bold text-gray-700">UGX ${calculateSubtotal().toLocaleString()}</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row justify-between items-center pt-2">
+                                    <span class="text-xl font-semibold text-gray-900 mb-2 sm:mb-0">Discount:</span>
+                                    <span class="text-xl font-bold text-red-600">- UGX ${calculateDiscountAmount().toLocaleString()}</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row justify-between items-center pt-2">
+                                    <span class="text-xl font-semibold text-gray-900 mb-2 sm:mb-0">Tax (18%):</span>
+                                    <span class="text-xl font-bold text-gray-700">+ UGX ${(calculateSubtotal() - calculateDiscountAmount() > 0 ? (calculateSubtotal() - calculateDiscountAmount()) * 0.18 : 0).toLocaleString()}</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row justify-between items-center border-t-2 border-gray-200 pt-4 mt-4">
+                                    <span class="text-2xl font-extrabold text-gray-900 mb-4 sm:mb-0">
+                                        Total:
+                                    </span>
+                                    <span class="text-3xl font-extrabold text-blue-700">
+                                        UGX ${(calculateSubtotal() - calculateDiscountAmount() + (calculateSubtotal() - calculateDiscountAmount() > 0 ? (calculateSubtotal() - calculateDiscountAmount()) * 0.18 : 0)).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div class="mt-6 flex flex-col sm:flex-row justify-end space-y-4 sm:space-y-0 sm:space-x-4">
+                                    <button id="clear-cart-btn" class="px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 transition-colors duration-200 ease-in-out">
+                                        Clear Cart
+                                    </button>
+                                    <button id="checkout-btn" class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors duration-200 ease-in-out">
+                                        Proceed to Checkout
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        contentHtml = `
+                            <header class="mb-8">
+                                <h1 class="text-4xl font-bold text-gray-800">Available Products</h1>
+                                <p class="text-gray-600 mt-2">Click on a product to add it to the cart.</p>
+                                <!-- Product Search -->
+                                <div class="relative mt-4">
+                                    <svg data-lucide="Search" class="lucide absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="20" height="20"></svg>
+                                    <input type="text" id="product-search-input" placeholder="Search products by name or SKU..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${productSearchTerm}">
+                                </div>
+                            </header>
+
+                            <!-- Product Slider -->
+                            <div class="relative w-full overflow-hidden rounded-xl bg-white shadow-lg p-6 border border-gray-200">
+                                <div id="product-slider-inner" class="flex transition-transform duration-500 ease-in-out" style="transform: translateX(-${productSliderPage * 100}%);">
+                                    ${productCardsHtml}
+                                </div>
+
+                                <!-- Slider Navigation Buttons -->
+                                ${productSliderPage > 0 ? `
+                                    <button id="prev-product-page-btn" class="absolute left-0 top-1/2 -translate-y-1/2 bg-white bg-opacity-75 p-2 rounded-full shadow-md hover:bg-opacity-100 transition-colors duration-200 ease-in-out focus:outline-none z-10 ml-2">
+                                        <svg data-lucide="ChevronLeft" class="lucide text-gray-700" width="24" height="24"></svg>
+                                    </button>
+                                ` : ''}
+                                ${productSliderPage < currentTotalProductSliderPages - 1 ? `
+                                    <button id="next-product-page-btn" class="absolute right-0 top-1/2 -translate-y-1/2 bg-white bg-opacity-75 p-2 rounded-full shadow-md hover:bg-opacity-100 transition-colors duration-200 ease-in-out focus:outline-none z-10 mr-2">
+                                        <svg data-lucide="ChevronRight" class="lucide" width="24" height="24"></svg>
+                                    </button>
+                                ` : ''}
+
+                                <!-- Pagination Dots (Optional, but good for UX) -->
+                                <div class="flex justify-center mt-4 space-x-2">
+                                    ${Array.from({ length: currentTotalProductSliderPages }).map((_, index) => `
+                                        <button data-page-index="${index}" class="pagination-dot w-3 h-3 rounded-full ${index === productSliderPage ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'} transition-colors duration-200"></button>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Cart Section -->
+                            <div class="mt-12 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h2 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="ShoppingCart" class="lucide text-yellow-400 mr-2" width="36" height="36"></svg> Your Cart
+                                </h2>
+                                ${cartItemsHtml}
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'product-management':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="Package" class="lucide mr-2" width="32" height="32"></svg> Product Management
+                                </h1>
+
+                                <!-- Add/Edit Product Form -->
+                                <form id="product-form" class="space-y-4 mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                    <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                                        ${editingProductId ? 'Edit Product' : 'Add New Product'}
+                                    </h2>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="new-product-name" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                                            <input type="text" id="new-product-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductName}" required>
+                                        </div>
+                                        <div>
+                                            <label for="new-product-sku" class="block text-sm font-medium text-gray-700 mb-1">Barcode / SKU</label>
+                                            <input type="text" id="new-product-sku" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductSku}" placeholder="e.g., SP300W">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label for="new-product-cost-price" class="block text-sm font-medium text-gray-700 mb-1">Cost Price (UGX)</label>
+                                            <input type="number" id="new-product-cost-price" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductCostPrice}" min="0.01" step="0.01" required>
+                                        </div>
+                                        <div>
+                                            <label for="new-product-price" class="block text-sm font-medium text-gray-700 mb-1">Selling Price (UGX)</label>
+                                            <input type="number" id="new-product-price" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductPrice}" min="0.01" step="0.01" required>
+                                        </div>
+                                        <div>
+                                            <label for="new-product-stock" class="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
+                                            <input type="number" id="new-product-stock" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductStock}" min="0" step="1" required>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label for="new-product-category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                            <input type="text" id="new-product-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductCategory}" placeholder="e.g., Solar, Security">
+                                        </div>
+                                        <div>
+                                            <label for="new-product-variants" class="block text-sm font-medium text-gray-700 mb-1">Variants</label>
+                                            <input type="text" id="new-product-variants" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductVariants}" placeholder="e.g., White/Black, 60A MPPT">
+                                        </div>
+                                        <div>
+                                            <label for="new-product-expiry-date" class="block text-sm font-medium text-gray-700 mb-1">Expiry Date (Optional)</label>
+                                            <input type="text" id="new-product-expiry-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductExpiryDate}" placeholder="YYYY-MM-DD or N/A">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="new-product-image" class="block text-sm font-medium text-gray-700 mb-1">Image URL (Optional)</label>
+                                        <input type="text" id="new-product-image" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" value="${newProductImage}" placeholder="e.g., https://via.placeholder.com/150">
+                                    </div>
+                                    <div>
+                                        <label for="new-product-description" class="block text-sm font-medium text-gray-700 mb-1">Product Description</label>
+                                        <textarea id="new-product-description" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 h-24 resize-y" placeholder="Enter product description or generate one with AI...">${newProductDescription}</textarea>
+                                        <button type="button" id="generate-description-btn" class="mt-2 py-2 px-4 bg-yellow-400 text-gray-800 font-semibold rounded-lg hover:bg-yellow-500 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 flex items-center justify-center" ${isGeneratingDescription ? 'disabled' : ''}>
+                                            ${isGeneratingDescription ? `
+                                                <svg class="animate-spin-custom -ml-1 mr-2 h-5 w-5 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Generating...
+                                            ` : `
+                                                <svg data-lucide="Sparkles" class="lucide mr-2" width="18" height="18"></svg> Generate Description
+                                            `}
+                                        </button>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center">
+                                            ${editingProductId ? `<svg data-lucide="Save" class="lucide mr-2" width="18" height="18"></svg> Save Changes` : `<svg data-lucide="PlusCircle" class="lucide mr-2" width="18" height="18"></svg> Add Product`}
+                                        </button>
+                                        ${editingProductId ? `
+                                            <button type="button" id="cancel-edit-btn" class="py-2 px-4 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 flex items-center justify-center">
+                                                <svg data-lucide="X" class="lucide mr-2" width="18" height="18"></svg> Cancel Edit
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </form>
+
+                                <!-- Product List -->
+                                <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
+                                    <svg data-lucide="LayoutGrid" class="lucide mr-2" width="24" height="24"></svg> All Products
+                                </h2>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+                                        <thead>
+                                            <tr class="bg-gray-100 border-b border-gray-200">
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">ID</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Image</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Name</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">SKU</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Cost Price</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Selling Price</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Stock</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Category</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Expiry</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Description</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${products.length === 0 ? `
+                                                <tr>
+                                                    <td colSpan="11" class="text-center py-4 text-gray-500">No products added yet.</td>
+                                                </tr>
+                                            ` : products.map(product => `
+                                                <tr class="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.id}</td>
+                                                    <td class="py-3 px-4">
+                                                        <img src="${product.image}" alt="${product.name}" class="w-12 h-12 object-cover rounded-md" onerror="this.onerror=null;this.src='https://placehold.co/50x50/CCCCCC/666666?text=X';"/>
+                                                    </td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800 font-medium">${product.name}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.sku || 'N/A'}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.costPrice?.toLocaleString() || 'N/A'}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.price.toLocaleString()}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800 flex items-center">
+                                                        ${product.stock}
+                                                        ${product.stock <= 5 ? '<svg data-lucide="AlertTriangle" class="lucide text-yellow-600 ml-1" width="14" height="14"></svg>' : ''}
+                                                        <button data-product-id="${product.id}" class="add-stock-btn ml-2 p-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors" title="Add Stock">
+                                                            <svg data-lucide="Plus" class="lucide" width="16" height="16"></svg>
+                                                        </button>
+                                                    </td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.category || 'N/A'}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.expiryDate || 'N/A'}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="${product.description}">${product.description || 'N/A'}</td>
+                                                    <td class="py-3 px-4 text-sm">
+                                                        <div class="flex space-x-2">
+                                                            <button data-product-id="${product.id}" class="edit-product-btn p-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors" title="Edit Product">
+                                                                <svg data-lucide="Edit" class="lucide" width="16" height="16"></svg>
+                                                            </button>
+                                                            <button data-product-id="${product.id}" class="delete-product-btn p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors" title="Delete Product">
+                                                                <svg data-lucide="Trash2" class="lucide" width="16" height="16"></svg>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'inventory':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="Package" class="lucide mr-2" width="32" height="32"></svg> Inventory Management
+                                </h1>
+                                <p class="text-gray-600 mb-4">
+                                    View current stock levels, perform stock adjustments, and track inventory logs.
+                                </p>
+
+                                <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
+                                    <svg data-lucide="LayoutGrid" class="lucide mr-2" width="24" height="24"></svg> Current Stock Levels
+                                </h2>
+                                <div class="overflow-x-auto mb-8">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+                                        <thead>
+                                            <tr class="bg-gray-100 border-b border-gray-200">
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Product Name</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">SKU</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Stock</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Status</th>
+                                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${products.length === 0 ? `
+                                                <tr>
+                                                    <td colSpan="5" class="text-center py-4 text-gray-500">No products in inventory.</td>
+                                                </tr>
+                                            ` : products.map(product => `
+                                                <tr class="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
+                                                    <td class="py-3 px-4 text-sm text-gray-800 font-medium">${product.name}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.sku || 'N/A'}</td>
+                                                    <td class="py-3 px-4 text-sm text-gray-800">${product.stock}</td>
+                                                    <td class="py-3 px-4 text-sm">
+                                                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                                                            product.stock <= 5 ? 'bg-red-100 text-red-800' :
+                                                            product.stock <= 20 ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-green-100 text-green-800'
+                                                        }">
+                                                            ${product.stock <= 5 ? 'Low' : product.stock <= 20 ? 'Medium' : 'High'}
+                                                        </span>
+                                                    </td>
+                                                    <td class="py-3 px-4 text-sm">
+                                                        <button data-product-id="${product.id}" class="adjust-stock-btn p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors" title="Adjust Stock">
+                                                            <svg data-lucide="Edit" class="lucide" width="16" height="16"></svg>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <h3 class="text-lg font-semibold mb-2 text-gray-800">Other Inventory Features (Placeholders)</h3>
+                                    <p>Stock Transfer between Branches</p>
+                                    <p>Stock History Logs</p>
+                                    <p>Inventory Valuation (FIFO, LIFO)</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'sales-report':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="BarChart2" class="lucide mr-2" width="32" height="32"></svg> Sales Report (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    This section would display daily, weekly, monthly sales, sales per product, category, etc.
+                                    Integration with a backend database would be required to store and retrieve sales data.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Sales data and charts would appear here.</p>
+                                    <p>e.g., Total Sales: UGX 15,000,000</p>
+                                    <p>Top Product: Coca-Cola</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'user-management':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="Users" class="lucide mr-2" width="32" height="32"></svg> User Management (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    This module allows owners to add, edit, or delete users, assign roles, and manage user permissions.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>User list, add/edit forms, and activity logs would be displayed here.</p>
+                                    <p>Example: Admin, Cashier, Manager accounts.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'payments':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="DollarSign" class="lucide mr-2" width="32" height="32"></svg> Payment Management (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    View payment logs, manage credit sales, and integrate with payment APIs.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Payment transaction history and credit accounts would be displayed here.</p>
+                                    <p>Mobile Money / Card API integration features.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'customer-management':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="UserCheck" class="lucide mr-2" width="32" height="32"></svg> Customer Management (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    Manage customer details, loyalty points, purchase history, and credit limits.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Customer list, add/edit forms, and loyalty program details would be displayed here.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'reports-bi':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="BarChart2" class="lucide mr-2" width="32" height="32"></svg> Reports & Business Intelligence (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    Access detailed sales reports, inventory insights, and staff/branch performance analytics.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Comprehensive reports and data visualizations would appear here.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'security-config':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="ShieldCheck" class="lucide mr-2" width="32" height="32"></svg> Security & Configuration (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    Manage user roles, audit logs, auto-logout timers, and backup settings.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Security settings and system configuration forms would appear here.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'receipts-invoicing':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="Receipt" class="lucide mr-2" width="32" height="32"></svg> Receipts & Invoicing (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    Manage receipt history, reprint, email, or download receipts, and customize formats.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Transaction list with receipt options would appear here.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'system-settings':
+                    if (hasAccess(['owner'])) {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                                <h1 class="text-3xl font-bold mb-6 text-gray-800 flex items-center">
+                                    <svg data-lucide="Settings" class="lucide mr-2" width="32" height="32"></svg> System Settings (Placeholder)
+                                </h1>
+                                <p class="text-gray-600">
+                                    Configure business name, logo, tax, currency, receipt footers, and discount limits.
+                                </p>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+                                    <p>Detailed system configuration forms would appear here.</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `
+                            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                                <svg data-lucide="XCircle" class="lucide text-red-500 mx-auto mb-4" width="48" height="48"></svg>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+                                <p class="text-gray-600">${accessDeniedMessage}</p>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                default: // Fallback for unknown pages or initial state
+                    contentHtml = `
+                        <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 text-center py-12">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome to SOFTNODES POS System</h2>
+                            <p class="text-gray-600">Please select a module from the sidebar.</p>
+                        </div>
+                    `;
+                    break;
+            }
+            mainContentArea.innerHTML = contentHtml;
+            attachEventListeners(); // Re-attach listeners after DOM update
+            console.log("Main content rendered and event listeners attached."); // Debugging log
+        }
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            // Message Box
+            messageBoxOkButton.onclick = hideMessageBox; // Ensure this is reset to just hide
+
+            // Role Selection Buttons (these are now hidden, but the handler remains for completeness)
+            document.querySelectorAll('.role-select-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const role = e.currentTarget.dataset.role;
+                    handleRoleSelect(role);
+                };
+            });
+
+            logoutButton.onclick = handleLogout;
+
+            const gotoSalesBtn = document.getElementById('goto-sales-btn');
+            if (gotoSalesBtn) {
+                gotoSalesBtn.onclick = () => {
+                    currentPage = 'products';
+                    renderApp();
+                };
+            }
+            const manageProductsBtn = document.getElementById('manage-products-btn');
+            if (manageProductsBtn) {
+                manageProductsBtn.onclick = () => {
+                    currentPage = 'product-management';
+                    renderApp();
+                };
+            }
+
+
+            // Products Page (Sales/Checkout)
+            document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    const product = products.find(p => p.id === productId);
+                    if (product) addToCart(product);
+                };
+            });
+
+            document.querySelectorAll('.update-cart-qty-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    const change = parseInt(e.currentTarget.dataset.change);
+                    updateCartQuantity(productId, change);
+                };
+            });
+
+            document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    removeFromCart(productId);
+                };
+            });
+
+            const clearCartBtn = document.getElementById('clear-cart-btn');
+            if (clearCartBtn) clearCartBtn.onclick = clearCart;
+
+            const checkoutBtn = document.getElementById('checkout-btn');
+            if (checkoutBtn) checkoutBtn.onclick = handleCheckout;
+
+            const discountTypeSelect = document.getElementById('discount-type-select');
+            if (discountTypeSelect) {
+                discountTypeSelect.onchange = (e) => {
+                    discountType = e.target.value;
+                    discountValue = 0; // Reset value on type change
+                    renderApp();
+                };
+            }
+            const discountValueInput = document.getElementById('discount-value-input');
+            if (discountValueInput) {
+                discountValueInput.oninput = (e) => {
+                    discountValue = parseFloat(e.target.value) || 0;
+                    renderApp();
+                };
+            }
+
+            document.querySelectorAll('.payment-method-btn').forEach(button => {
+                button.onclick = (e) => {
+                    paymentMethod = e.currentTarget.dataset.paymentMethod;
+                    renderApp();
+                };
+            });
+
+            const productSearchInput = document.getElementById('product-search-input');
+            if (productSearchInput) {
+                productSearchInput.oninput = (e) => {
+                    productSearchTerm = e.target.value;
+                    productSliderPage = 0; // Reset slider page on search
+                    renderApp();
+                };
+            }
+
+            const prevProductPageBtn = document.getElementById('prev-product-page-btn');
+            if (prevProductPageBtn) prevProductPageBtn.onclick = goToPrevProductPage;
+            const nextProductPageBtn = document.getElementById('next-product-page-btn');
+            if (nextProductPageBtn) nextProductPageBtn.onclick = goToNextProductPage;
+
+            document.querySelectorAll('.pagination-dot').forEach(dot => {
+                dot.onclick = (e) => {
+                    productSliderPage = parseInt(e.currentTarget.dataset.pageIndex);
+                    renderApp();
+                };
+            });
+
+            // Product Management Page
+            const productForm = document.getElementById('product-form');
+            if (productForm) {
+                productForm.onsubmit = (e) => {
+                    e.preventDefault(); // Prevent default form submission
+                    if (editingProductId) {
+                        handleSaveProduct(e);
+                    } else {
+                        handleAddProduct(e);
+                    }
+                };
+
+                // Attach input listeners to update global state variables
+                const newProductNameInput = document.getElementById('new-product-name');
+                if (newProductNameInput) newProductNameInput.oninput = (e) => newProductName = e.target.value;
+
+                const newProductSkuInput = document.getElementById('new-product-sku');
+                if (newProductSkuInput) newProductSkuInput.oninput = (e) => newProductSku = e.target.value;
+
+                const newProductCostPriceInput = document.getElementById('new-product-cost-price');
+                if (newProductCostPriceInput) newProductCostPriceInput.oninput = (e) => newProductCostPrice = e.target.value;
+
+                const newProductPriceInput = document.getElementById('new-product-price');
+                if (newProductPriceInput) newProductPriceInput.oninput = (e) => newProductPrice = e.target.value;
+
+                const newProductStockInput = document.getElementById('new-product-stock');
+                if (newProductStockInput) newProductStockInput.oninput = (e) => newProductStock = e.target.value;
+
+                const newProductCategoryInput = document.getElementById('new-product-category');
+                if (newProductCategoryInput) newProductCategoryInput.oninput = (e) => newProductCategory = e.target.value;
+
+                const newProductVariantsInput = document.getElementById('new-product-variants');
+                if (newProductVariantsInput) newProductVariantsInput.oninput = (e) => newProductVariants = e.target.value;
+
+                const newProductExpiryDateInput = document.getElementById('new-product-expiry-date');
+                if (newProductExpiryDateInput) newProductExpiryDateInput.oninput = (e) => newProductExpiryDate = e.target.value;
+
+                const newProductImageInput = document.getElementById('new-product-image');
+                if (newProductImageInput) newProductImageInput.oninput = (e) => newProductImage = e.target.value;
+
+                const newProductDescriptionInput = document.getElementById('new-product-description');
+                if (newProductDescriptionInput) newProductDescriptionInput.oninput = (e) => newProductDescription = e.target.value;
+
+
+                const generateDescriptionBtn = document.getElementById('generate-description-btn');
+                if (generateDescriptionBtn) generateDescriptionBtn.onclick = generateProductDescription;
+
+                const cancelEditBtn = document.getElementById('cancel-edit-btn');
+                if (cancelEditBtn) {
+                    cancelEditBtn.onclick = () => {
+                        resetProductForm();
+                        renderApp();
+                    };
+                }
+            }
+
+            document.querySelectorAll('.edit-product-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    handleEditProduct(productId);
+                };
+            });
+
+            document.querySelectorAll('.delete-product-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    // Corrected usage of showMessageBox with a callback
+                    showMessageBox(
+                        "Confirm Deletion",
+                        "Are you sure you want to delete this product?",
+                        () => handleDeleteProduct(productId) // Pass a callback for confirmation
+                    );
+                };
+            });
+
+            document.querySelectorAll('.add-stock-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    const amountStr = prompt(`Add stock for product ID ${productId}:`, '10');
+                    const amount = parseInt(amountStr);
+                    if (!isNaN(amount) && amount > 0) {
+                        handleStockIn(productId, amount);
+                    } else if (!isNaN(amount) && amount <= 0) {
+                        showMessageBox("Invalid Amount", "Please enter a positive number to add stock.");
+                    }
+                };
+            });
+
+            document.querySelectorAll('.adjust-stock-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    const product = products.find(p => p.id === productId);
+                    const amountStr = prompt(`Adjust stock for ${product.name} (current: ${product.stock}). Enter positive to add, negative to remove:`, '0');
+                    const amount = parseInt(amountStr);
+                    if (!isNaN(amount) && amount !== 0) {
+                        handleStockIn(productId, amount);
+                    } else if (isNaN(amount)) {
+                        showMessageBox("Invalid Input", "Please enter a valid number for stock adjustment.");
+                    }
+                };
+            });
+
+            document.querySelectorAll('.get-sales-pitch-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const productId = parseInt(e.currentTarget.dataset.productId);
+                    const product = products.find(p => p.id === productId);
+                    if (product) generateSalesPitch(product);
+                };
+            });
+        }
+
+        // Initial render when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded fired."); // Debugging log
+            renderApp();
+        });
+
+    </script>
+</body>
+</html>
